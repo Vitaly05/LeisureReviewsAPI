@@ -7,7 +7,5 @@ namespace LeisureReviewsAPI.Models.ViewModels
         public bool IsAuthorized { get; set; } = false;
 
         public User CurrentUser { get; set; }
-
-        public string AdditionalUrl { get; set; } = "";
     }
 }
