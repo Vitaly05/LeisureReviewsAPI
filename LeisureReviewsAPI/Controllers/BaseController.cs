@@ -1,4 +1,5 @@
-﻿using LeisureReviewsAPI.Repositories.Interfaces;
+﻿using LeisureReviewsAPI.Models;
+using LeisureReviewsAPI.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeisureReviewsAPI.Controllers
@@ -11,5 +12,7 @@ namespace LeisureReviewsAPI.Controllers
         {
             this.usersRepository = usersRepository;
         }
+
+        protected IActionResult InvalidModelState() => BadRequest(new ErrorResponseModel { Code = 0, Message = "Invalid request model" });
     }
 }

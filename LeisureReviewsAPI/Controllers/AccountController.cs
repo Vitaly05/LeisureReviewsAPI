@@ -31,10 +31,30 @@ namespace LeisureReviewsAPI.Controllers
         public async Task<IActionResult> SignIn(LoginModel model)
         {
             if (!ModelState.IsValid)
-                return BadRequest(new ErrorResponseModel { Code = 0, Message = "Invalid request model" });
+                return InvalidModelState();
             var user = await signInAsync(model);
             if (user is null)
                 return BadRequest(new ErrorResponseModel { Code = 1, Message = "Incorrect username or password" });
+            var accountInfo = new AccountInfo
+            {
+                CurrentUser = new UserDto(user),
+                IsAuthorized = true
+            };
+            return Ok(accountInfo);
+        }
+
+        [HttpPost("sign-up")]
+        public async Task<IActionResult> SignUp(LoginModel model)
+        {
+            if (!ModelState.IsValid)
+                return InvalidModelState();
+            
+            var user = new User { UserName = model.Username };
+            var registerResult = await registerUserAsync(user, model.Password);
+            if (!registerResult)
+                return BadRequest(new ErrorResponseModel { Code = 2, Message = "Username is already taken" });
+
+            await signInManager.SignInAsync(user, model.RememberMe);
             var accountInfo = new AccountInfo
             {
                 CurrentUser = new UserDto(user),
@@ -76,6 +96,12 @@ namespace LeisureReviewsAPI.Controllers
                 return false;
             }
             return true;
+        }
+
+        private async Task<bool> registerUserAsync(User user, string password)
+        {
+            var result = await usersRepository.CreateAsync(user, password);
+            return result.Succeeded;
         }
 
         private bool accountIsActive(User user)
