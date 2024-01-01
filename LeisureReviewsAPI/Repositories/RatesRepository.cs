@@ -14,7 +14,7 @@ namespace LeisureReviewsAPI.Repositories
         public async Task<double> GetAverageRateAsync(Leisure leisure)
         {
             IQueryable<Rate> allRates = context.Rates.Where(r => r.Leisure.Id == leisure.Id);
-            if (!await allRates.AnyAsync()) return double.NaN;
+            if (!await allRates.AnyAsync()) return 0;
             return Math.Round(await allRates.AverageAsync(r => r.Value), 1);
         }
 

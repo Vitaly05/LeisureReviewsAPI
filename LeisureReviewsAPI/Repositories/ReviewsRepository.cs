@@ -17,9 +17,6 @@ namespace LeisureReviewsAPI.Repositories
             this.searchService = searchService;
         }
 
-        public async Task<List<Review>> GetAllAsync(string authorId) =>
-            await context.Reviews.Where(r => r.AuthorId == authorId).OrderByDescending(r => r.CreateTime).Include(r => r.Tags).Include(r => r.Leisure).AsSplitQuery().ToListAsync();
-
         public async Task<Review> GetAsync(string id) =>
             await context.Reviews.Include(r => r.Tags).Include(r => r.Author).Include(r => r.Likes).ThenInclude(l => l.User)
                 .Include(r => r.Comments).ThenInclude(c => c.Author).Include(r => r.Illustrations).Include(r => r.Leisure).ThenInclude(l => l.Rates)
@@ -70,7 +67,11 @@ namespace LeisureReviewsAPI.Repositories
         }
 
         private async Task<List<Review>> getPageAsync(IQueryable<Review> reviewQuery, Expression<Func<Review, bool>> predicate, int page, int pageSize) =>
-            await reviewQuery.Where(predicate).Skip(page * pageSize).Take(pageSize).ToListAsync();
+            await reviewQuery.AsNoTracking()
+                .Where(predicate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
 
         private async Task updateReviewAsync(Review review)
         {
@@ -100,8 +101,8 @@ namespace LeisureReviewsAPI.Repositories
         private IQueryable<Review> orderReviews<TKey>(SortType sortType, Expression<Func<Review, TKey>> keySelector) =>
             sortType switch
             {
-                SortType.Descending => context.Reviews.OrderByDescending(keySelector).Include(r => r.Tags).Include(r => r.Likes).Include(r => r.Leisure).AsSplitQuery(),
-                _ => context.Reviews.OrderBy(keySelector).Include(r => r.Tags).Include(r => r.Likes).Include(r => r.Leisure).AsSplitQuery()
+                SortType.Descending => context.Reviews.AsNoTracking().OrderByDescending(keySelector).Include(r => r.Tags).Include(r => r.Likes).AsSplitQuery(),
+                _ => context.Reviews.AsNoTracking().OrderBy(keySelector).Include(r => r.Tags).Include(r => r.Likes).AsSplitQuery(),
             };
     }
 }

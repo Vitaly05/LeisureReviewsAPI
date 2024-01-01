@@ -1,6 +1,4 @@
-﻿using LeisureReviewsAPI.Models.Database;
-using LeisureReviewsAPI.Models.ViewModels;
-using LeisureReviewsAPI.Repositories.Interfaces;
+﻿using LeisureReviewsAPI.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeisureReviewsAPI.Controllers
