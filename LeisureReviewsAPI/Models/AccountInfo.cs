@@ -1,4 +1,4 @@
-﻿using LeisureReviewsAPI.Models.Dto;
+﻿using LeisureReviewsAPI.Models.Database;
 
 namespace LeisureReviewsAPI.Models
 {
@@ -6,6 +6,6 @@ namespace LeisureReviewsAPI.Models
     {
         public bool IsAuthorized { get; set; } = false;
 
-        public UserDto CurrentUser { get; set; }
+        public User CurrentUser { get; set; }
     }
 }

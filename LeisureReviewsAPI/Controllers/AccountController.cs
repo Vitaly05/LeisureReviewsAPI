@@ -25,7 +25,17 @@ namespace LeisureReviewsAPI.Controllers
 
 
         [HttpGet("check-auth")]
-        public async Task<AccountInfo> CheckAuth() => await getCurrentUserInfoAsync();
+        public async Task<AccountInfoDto> CheckAuth() => new AccountInfoDto(await getCurrentUserInfoAsync());
+
+        [HttpGet("check-create-review-access")]
+        public async Task<IActionResult> CheckAccessToCreateReview(string username)
+        {
+            var currentUserInfo = await getCurrentUserInfoAsync();
+            if (!currentUserInfo.IsAuthorized) return Forbid();
+            var isAdmin = (await usersRepository.GetRolesAsync(currentUserInfo.CurrentUser)).Contains("Admin");
+            if (isAdmin || username == currentUserInfo.CurrentUser.UserName) return Ok();
+            return Forbid();
+        }
 
         [HttpPost("sign-in")]
         public async Task<IActionResult> SignIn(LoginModel model)
@@ -35,7 +45,7 @@ namespace LeisureReviewsAPI.Controllers
             var user = await signInAsync(model);
             if (user is null)
                 return BadRequest(new ErrorResponseModel { Code = 1, Message = "Incorrect username or password" });
-            var accountInfo = new AccountInfo
+            var accountInfo = new AccountInfoDto
             {
                 CurrentUser = new UserDto(user),
                 IsAuthorized = true
@@ -55,7 +65,7 @@ namespace LeisureReviewsAPI.Controllers
                 return BadRequest(new ErrorResponseModel { Code = 2, Message = "Username is already taken" });
 
             await signInManager.SignInAsync(user, model.RememberMe);
-            var accountInfo = new AccountInfo
+            var accountInfo = new AccountInfoDto
             {
                 CurrentUser = new UserDto(user),
                 IsAuthorized = true
@@ -76,7 +86,7 @@ namespace LeisureReviewsAPI.Controllers
             var isAuthorized = HttpContext.User.Identity.IsAuthenticated;
             var model = new AccountInfo { IsAuthorized = isAuthorized };
             if (isAuthorized)
-                model.CurrentUser = new UserDto(await usersRepository.GetAsync(HttpContext.User));
+                model.CurrentUser = await usersRepository.GetAsync(HttpContext.User);
             return model;
         }
 

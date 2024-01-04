@@ -8,8 +8,11 @@ namespace LeisureReviewsAPI.Models.Dto
         public UserDto(User user)
         {
             this.UserName = user.UserName;
+            this.LikesCount = user.LikesCount;
         }
 
         public string UserName { get; set; }
+
+        public int LikesCount { get; set; }
     }
 }

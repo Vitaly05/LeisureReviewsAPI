@@ -2,8 +2,6 @@
 using LeisureReviewsAPI.Models;
 using LeisureReviewsAPI.Models.Database;
 using LeisureReviewsAPI.Models.Dto;
-using LeisureReviewsAPI.Models.ViewModels;
-using LeisureReviewsAPI.Repositories;
 using LeisureReviewsAPI.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq.Expressions;
@@ -28,8 +26,24 @@ namespace LeisureReviewsAPI.Controllers
             return await getReviewsDtoListAsync(getReviewSortModel(sortTarget, sortType), r => true, page);
         }
 
+        [HttpGet("get-user-page/{username}/{page}/{sortTarget}/{sortType}")]
+        public async Task<IActionResult> GetReviewsPage(string username, int page, string sortTarget, string sortType)
+        {
+            var user = await usersRepository.FindAsync(username);
+            if (user is null) return NotFound();
+            return Ok(await getReviewsDtoListAsync(getReviewSortModel(sortTarget, sortType), r => r.AuthorId == user.Id, page));
+        }
+
         [HttpGet("get-pages-count")]
         public async Task<int> GetPagesCount() => await reviewsRepository.GetPagesCountAsync(5, r => true);
+
+        [HttpGet("get-user-pages-count")]
+        public async Task<IActionResult> GetUserPagesCount(string username)
+        {
+            var user = await usersRepository.FindAsync(username);
+            if (user is null) return NotFound();
+            return Ok(await reviewsRepository.GetPagesCountAsync(5, r => r.AuthorId == user.Id));
+        }
 
 
         private ReviewSortModel getReviewSortModel(string sortTarget, string sortType)
