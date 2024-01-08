@@ -94,6 +94,7 @@ namespace LeisureReviewsAPI.Repositories
 
         private async Task addReviewAsync(Review review)
         {
+            review.Id = Guid.NewGuid().ToString();
             context.Reviews.Add(review);
             await searchService.CreateReviewAsync(review);
         }

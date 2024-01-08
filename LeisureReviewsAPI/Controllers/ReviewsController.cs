@@ -2,7 +2,10 @@
 using LeisureReviewsAPI.Models;
 using LeisureReviewsAPI.Models.Database;
 using LeisureReviewsAPI.Models.Dto;
+using LeisureReviewsAPI.Models.ViewModels;
+using LeisureReviewsAPI.Repositories;
 using LeisureReviewsAPI.Repositories.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq.Expressions;
 
@@ -14,9 +17,20 @@ namespace LeisureReviewsAPI.Controllers
     {
         private readonly IReviewsRepository reviewsRepository;
 
-        public ReviewsController(IUsersRepository usersRepository, IReviewsRepository reviewsRepository) : base(usersRepository)
+        private readonly ILeisuresRepository leisuresRepository;
+        
+        private readonly ITagsRepository tagsRepository;
+
+        public ReviewsController(
+            IUsersRepository usersRepository, 
+            IReviewsRepository reviewsRepository,
+            ILeisuresRepository leisuresRepository,
+            ITagsRepository tagsRepository
+        ) : base(usersRepository)
         {
             this.reviewsRepository = reviewsRepository;
+            this.leisuresRepository = leisuresRepository;
+            this.tagsRepository = tagsRepository;
         }
 
 
@@ -45,6 +59,15 @@ namespace LeisureReviewsAPI.Controllers
             return Ok(await reviewsRepository.GetPagesCountAsync(5, r => r.AuthorId == user.Id));
         }
 
+        [Authorize]
+        [HttpPost("save-review")]
+        public async Task<IActionResult> SaveReview(ReviewModel reviewModel)
+        {
+            if (!ModelState.IsValid) return BadRequest();
+            await saveReviewAsync(reviewModel);
+            return Ok();
+        }
+
 
         private ReviewSortModel getReviewSortModel(string sortTarget, string sortType)
         {
@@ -67,5 +90,20 @@ namespace LeisureReviewsAPI.Controllers
                 ReviewSortTarget.Likes => await reviewsRepository.GetTopLikedAsync(predicate, sortModel.Type, page, pageSize),
                 _ => new()
             };
+
+        private async Task saveReviewAsync(ReviewModel reviewModel)
+        {
+            var tags = await addTagsAsync(reviewModel.TagsNames);
+            var leisure = await leisuresRepository.AddAsync(reviewModel.LeisureName);
+            await reviewsRepository.SaveAsync(reviewModel.ConvertToReview(tags, leisure));
+            //await updateIllustrationAsync(reviewModel);
+        }
+
+        private async Task<ICollection<Tag>> addTagsAsync(List<string> tagsNames)
+        {
+            if (tagsNames is null) return new List<Tag>();
+            await tagsRepository.AddNewAsync(tagsNames);
+            return await tagsRepository.GetAsync(tagsNames);
+        }
     }
 }

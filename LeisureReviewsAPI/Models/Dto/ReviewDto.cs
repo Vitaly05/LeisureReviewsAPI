@@ -6,7 +6,7 @@ namespace LeisureReviewsAPI.Models.Dto
     public class ReviewDto
     {
         public ReviewDto() { }
-        public ReviewDto(Review review)
+        public ReviewDto(Review review, bool fullInfo = false)
         {
             this.Id = review.Id;
             this.AuthorId = review.AuthorId;
@@ -16,6 +16,8 @@ namespace LeisureReviewsAPI.Models.Dto
             this.AuthorRate = review.AuthorRate;
             this.Tags = review.Tags.Select(t => t.Name).ToList();
             this.LikesCount = review.Likes.Count;
+            if (fullInfo)
+                this.Content = review.Content;
         }
 
         public string Id { get; set; }
@@ -33,5 +35,26 @@ namespace LeisureReviewsAPI.Models.Dto
         public List<string> Tags { get; set; }
 
         public int LikesCount { get; set; }
+
+        public string Content { get; set; }
+    }
+
+    public static class ReviewExtension
+    {
+        public static Review ConvertToReview(this ReviewDto reviewDto, ICollection<Tag> tags, Leisure leisure)
+        {
+            return new Review
+            {
+                Id = reviewDto.Id,
+                AuthorId = reviewDto.AuthorId,
+                Title = reviewDto.Title,
+                LeisureId = reviewDto.LeisureId,
+                Group = reviewDto.Group,
+                AuthorRate = reviewDto.AuthorRate,
+                Content = reviewDto.Content,
+                Tags = tags,
+                Leisure = leisure
+            };
+        }
     }
 }
