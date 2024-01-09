@@ -18,7 +18,7 @@ namespace LeisureReviewsAPI.Repositories.Interfaces
 
         Task<int> GetPagesCountAsync(int pageSize, Expression<Func<Review, bool>> predicate);
 
-        Task SaveAsync(Review review);
+        Task<string> SaveAsync(Review review);
 
         Task DeleteAsync(string id);
     }

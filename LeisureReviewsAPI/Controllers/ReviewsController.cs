@@ -74,8 +74,8 @@ namespace LeisureReviewsAPI.Controllers
         {
             if (!ModelState.IsValid) return BadRequest();
             if (!await canSaveAndEditAsync(reviewModel.AuthorId)) return Forbid();
-            await saveReviewAsync(reviewModel);
-            return Ok();
+            var reviewId = await saveReviewAsync(reviewModel);
+            return Ok(reviewId);
         }
 
 
@@ -101,12 +101,13 @@ namespace LeisureReviewsAPI.Controllers
                 _ => new()
             };
 
-        private async Task saveReviewAsync(ReviewModel reviewModel)
+        private async Task<string> saveReviewAsync(ReviewModel reviewModel)
         {
             var tags = await addTagsAsync(reviewModel.TagsNames);
             var leisure = await leisuresRepository.AddAsync(reviewModel.LeisureName);
-            await reviewsRepository.SaveAsync(reviewModel.ConvertToReview(tags, leisure));
+            var reviewId = await reviewsRepository.SaveAsync(reviewModel.ConvertToReview(tags, leisure));
             //await updateIllustrationAsync(reviewModel);
+            return reviewId;
         }
 
         private async Task<ICollection<Tag>> addTagsAsync(List<string> tagsNames)

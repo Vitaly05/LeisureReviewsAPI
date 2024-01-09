@@ -3,6 +3,7 @@ using LeisureReviewsAPI.Data;
 using LeisureReviewsAPI.Models.Database;
 using LeisureReviewsAPI.Repositories.Interfaces;
 using LeisureReviewsAPI.Services.Interfaces;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
@@ -50,12 +51,14 @@ namespace LeisureReviewsAPI.Repositories
         public async Task<int> GetPagesCountAsync(int pageSize, Expression<Func<Review, bool>> predicate) =>
             (int)Math.Ceiling(await context.Reviews.Where(predicate).CountAsync() / (double)pageSize);
 
-        public async Task SaveAsync(Review review)
+        public async Task<string> SaveAsync(Review review)
         {
+            string id = "";
             if (context.Reviews.Any(r => r.Id == review.Id))
-                await updateReviewAsync(review);
-            else await addReviewAsync(review);
+                id = await updateReviewAsync(review);
+            else id = await addReviewAsync(review);
             await context.SaveChangesAsync();
+            return id;
         }
 
         public async Task DeleteAsync(string id)
@@ -73,13 +76,14 @@ namespace LeisureReviewsAPI.Repositories
                 .Take(pageSize)
                 .ToListAsync();
 
-        private async Task updateReviewAsync(Review review)
+        private async Task<string> updateReviewAsync(Review review)
         {
             var updatedReview = getUpdatedReview(await GetAsync(review.Id), review);
             context.Entry(updatedReview).Property(r => r.CreateTime).IsModified = false;
             context.Entry(updatedReview).Property(r => r.AuthorId).IsModified = false;
             context.Reviews.Update(updatedReview);
             await searchService.UpdateReviewAsync(await GetAsync(updatedReview.Id));
+            return updatedReview.Id;
         }
 
         private Review getUpdatedReview(Review existingReview, Review updatedReview)
@@ -92,11 +96,12 @@ namespace LeisureReviewsAPI.Repositories
             return mapper.Map(updatedReview, existingReview);
         }
 
-        private async Task addReviewAsync(Review review)
+        private async Task<string> addReviewAsync(Review review)
         {
             review.Id = Guid.NewGuid().ToString();
             context.Reviews.Add(review);
             await searchService.CreateReviewAsync(review);
+            return review.Id;
         }
 
         private IQueryable<Review> orderReviews<TKey>(SortType sortType, Expression<Func<Review, TKey>> keySelector) =>
