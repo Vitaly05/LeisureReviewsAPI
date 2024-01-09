@@ -2,8 +2,6 @@
 using LeisureReviewsAPI.Models;
 using LeisureReviewsAPI.Models.Database;
 using LeisureReviewsAPI.Models.Dto;
-using LeisureReviewsAPI.Models.ViewModels;
-using LeisureReviewsAPI.Repositories;
 using LeisureReviewsAPI.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -76,6 +74,17 @@ namespace LeisureReviewsAPI.Controllers
             if (!await canSaveAndEditAsync(reviewModel.AuthorId)) return Forbid();
             var reviewId = await saveReviewAsync(reviewModel);
             return Ok(reviewId);
+        }
+
+        [Authorize]
+        [HttpDelete("delete-review/{reviewId}")]
+        public async Task<IActionResult> DeleteReview(string reviewId)
+        {
+            var review = await reviewsRepository.GetAsync(reviewId);
+            if (review is null) return NotFound();
+            if (!await canSaveAndEditAsync(review.AuthorId)) return Forbid();
+            await reviewsRepository.DeleteAsync(reviewId);
+            return Ok();
         }
 
 
