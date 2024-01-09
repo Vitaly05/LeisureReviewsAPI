@@ -59,11 +59,21 @@ namespace LeisureReviewsAPI.Controllers
             return Ok(await reviewsRepository.GetPagesCountAsync(5, r => r.AuthorId == user.Id));
         }
 
+        [HttpGet("get-review/{reviewId}")]
+        public async Task<IActionResult> GetReview(string reviewId)
+        {
+            if (reviewId is null) return BadRequest();
+            var review = await reviewsRepository.GetAsync(reviewId);
+            if (review is null) return NotFound();
+            return Ok(new ReviewDto(review, true));
+        }
+
         [Authorize]
         [HttpPost("save-review")]
         public async Task<IActionResult> SaveReview(ReviewModel reviewModel)
         {
             if (!ModelState.IsValid) return BadRequest();
+            if (!await canSaveAndEditAsync(reviewModel.AuthorId)) return Forbid();
             await saveReviewAsync(reviewModel);
             return Ok();
         }

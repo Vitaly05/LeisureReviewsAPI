@@ -48,7 +48,7 @@ namespace LeisureReviewsAPI.Models.Dto
                 Id = reviewDto.Id,
                 AuthorId = reviewDto.AuthorId,
                 Title = reviewDto.Title,
-                LeisureId = reviewDto.LeisureId,
+                LeisureId = leisure.Id,
                 Group = reviewDto.Group,
                 AuthorRate = reviewDto.AuthorRate,
                 Content = reviewDto.Content,

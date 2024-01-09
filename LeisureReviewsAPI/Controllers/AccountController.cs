@@ -27,13 +27,12 @@ namespace LeisureReviewsAPI.Controllers
         [HttpGet("check-auth")]
         public async Task<AccountInfoDto> CheckAuth() => new AccountInfoDto(await getCurrentUserInfoAsync());
 
-        [HttpGet("check-create-review-access")]
-        public async Task<IActionResult> CheckAccessToCreateReview(string username)
+        [HttpGet("check-create-review-access/{authorId}")]
+        public async Task<IActionResult> CheckAccessToCreateReview(string authorId)
         {
             var currentUserInfo = await getCurrentUserInfoAsync();
             if (!currentUserInfo.IsAuthorized) return Forbid();
-            var isAdmin = (await usersRepository.GetRolesAsync(currentUserInfo.CurrentUser)).Contains("Admin");
-            if (isAdmin || username == currentUserInfo.CurrentUser.UserName) return Ok();
+            if (await canSaveAndEditAsync(authorId)) return Ok();
             return Forbid();
         }
 
