@@ -16,6 +16,7 @@ namespace LeisureReviewsAPI.Models.Dto
             this.AuthorRate = review.AuthorRate;
             this.Tags = review.Tags.Select(t => t.Name).ToList();
             this.LikesCount = review.Likes.Count;
+            this.CreateTime = review.CreateTime;
             if (fullInfo)
                 this.Content = review.Content;
         }
@@ -37,6 +38,8 @@ namespace LeisureReviewsAPI.Models.Dto
         public int LikesCount { get; set; }
 
         public string Content { get; set; }
+
+        public DateTime CreateTime { get; set; }
     }
 
     public static class ReviewExtension

@@ -18,5 +18,8 @@ namespace LeisureReviewsAPI.Repositories
         public async Task<int> GetCountAsync(User user) =>
             (await context.Users.Include(u => u.AuthoredReviews).ThenInclude(r => r.Likes).AsSplitQuery().FirstOrDefaultAsync(u => u.Id == user.Id))
                 .AuthoredReviews.Sum(r => r.Likes.Count);
+
+        public async Task<bool> HasLikeAsync(User user, Review review) => 
+            await context.Likes.AnyAsync(l => l.User == user && l.Review == review);
     }
 }

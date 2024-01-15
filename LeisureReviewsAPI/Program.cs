@@ -8,6 +8,8 @@ using LeisureReviewsAPI.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
+using LeisureReviewsAPI.Hubs;
+using Microsoft.AspNetCore.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +38,8 @@ builder.Services.AddCors(options =>
     {
         policyBuilder.WithOrigins(builder.Configuration["ReactHost"])
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -126,7 +129,8 @@ else
 }
 
 app.UseCors("ReactClientPolicy");
-
 app.MapControllers();
+
+app.MapHub<CommentsHub>("/hub/comments");
 
 app.Run();

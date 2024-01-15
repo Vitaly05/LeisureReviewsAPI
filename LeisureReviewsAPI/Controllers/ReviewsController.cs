@@ -2,6 +2,7 @@
 using LeisureReviewsAPI.Models;
 using LeisureReviewsAPI.Models.Database;
 using LeisureReviewsAPI.Models.Dto;
+using LeisureReviewsAPI.Repositories;
 using LeisureReviewsAPI.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,16 +20,24 @@ namespace LeisureReviewsAPI.Controllers
         
         private readonly ITagsRepository tagsRepository;
 
+        private readonly ILikesRepository likesRepository;
+
+        private readonly IRatesRepository ratesRepository;
+
         public ReviewsController(
             IUsersRepository usersRepository, 
             IReviewsRepository reviewsRepository,
             ILeisuresRepository leisuresRepository,
-            ITagsRepository tagsRepository
+            ITagsRepository tagsRepository,
+            ILikesRepository likesRepository,
+            IRatesRepository ratesRepository
         ) : base(usersRepository)
         {
             this.reviewsRepository = reviewsRepository;
             this.leisuresRepository = leisuresRepository;
             this.tagsRepository = tagsRepository;
+            this.likesRepository = likesRepository;
+            this.ratesRepository = ratesRepository;
         }
 
 
@@ -66,6 +75,14 @@ namespace LeisureReviewsAPI.Controllers
             return Ok(new ReviewDto(review, true));
         }
 
+        [HttpGet("get-related-reviews/{reviewId}")]
+        public async Task<IActionResult> GetRelatedReviews(string reviewId)
+        {
+            var relatedReviews = await reviewsRepository.GetRelatedAsync(reviewId, 5);
+            var relatedReviewsDto = relatedReviews.Select(r => new ReviewDto(r));
+            return Ok(relatedReviewsDto);
+        }
+
         [Authorize]
         [HttpPost("save-review")]
         public async Task<IActionResult> SaveReview(ReviewModel reviewModel)
@@ -84,6 +101,29 @@ namespace LeisureReviewsAPI.Controllers
             if (review is null) return NotFound();
             if (!await canSaveAndEditAsync(review.AuthorId)) return Forbid();
             await reviewsRepository.DeleteAsync(reviewId);
+            return Ok();
+        }
+
+        [Authorize]
+        [HttpGet("can-like/{reviewId}")]
+        public async Task<IActionResult> CanLike(string reviewId)
+        {
+            var user = await usersRepository.GetAsync(HttpContext.User);
+            var review = await reviewsRepository.GetAsync(reviewId);
+            if (review is null) return NotFound();
+            if (await likesRepository.HasLikeAsync(user, review))
+                return Ok(false);
+            return Ok(true);
+        }
+
+        [Authorize]
+        [HttpPost("like-review/{reviewId}")]
+        public async Task<IActionResult> LikeReview(string reviewId)
+        {
+            if (reviewId is null) return BadRequest();
+            var review = await reviewsRepository.GetAsync(reviewId);
+            if (review is null) return NotFound();
+            await likesRepository.LikeAsync(review, await usersRepository.GetAsync(HttpContext.User));
             return Ok();
         }
 

@@ -20,5 +20,11 @@ namespace LeisureReviewsAPI.Repositories
             await context.SaveChangesAsync();
             await searchService.UpdateReviewAsync(await context.Reviews.FirstOrDefaultAsync(r => r.Id == comment.Review.Id));
         }
+
+        public async Task<List<Comment>> GetCommentsAsync(string reviewId) =>
+            (await context.Reviews
+                .Include(r => r.Comments)
+                .ThenInclude(c => c.Author)
+                .FirstOrDefaultAsync(c => c.Id == reviewId)).Comments.OrderByDescending(c => c.CreateTime).ToList();
     }
 }

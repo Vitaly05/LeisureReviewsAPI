@@ -1,4 +1,5 @@
 ﻿using LeisureReviewsAPI.Models.Database;
+using LeisureReviewsAPI.Models.Dto;
 using LeisureReviewsAPI.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -23,7 +24,12 @@ namespace LeisureReviewsAPI.Hubs
 
         public async Task Init(string reviewId)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, reviewId);
+            if (!string.IsNullOrEmpty(reviewId))
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, reviewId);
+                var comments = await commentsRepository.GetCommentsAsync(reviewId);
+                await Clients.Caller.SendAsync("init-comments", comments.Select(c => c.ConvertToDto()));
+            }
         }
 
         [Authorize]
@@ -31,8 +37,7 @@ namespace LeisureReviewsAPI.Hubs
         {
             var comment = await createCommentAsync(text, reviewId);
             await commentsRepository.SaveAsync(comment);
-            await Clients.Group(reviewId).SendAsync("NewComment", comment.Author.UserName, 
-                comment.CreateTime.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture), comment.Text);
+            await Clients.Group(reviewId).SendAsync("new-comment", comment.ConvertToDto());
         }
 
         private async Task<Comment> createCommentAsync(string text, string reviewId)

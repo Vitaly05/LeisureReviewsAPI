@@ -32,6 +32,8 @@ namespace LeisureReviewsAPI.Repositories
         public async Task<User> GetAsync(ClaimsPrincipal principal) =>
             await userManager.GetUserAsync(principal);
 
+        public async Task<User> GetByIdAsync(string id) => await userManager.FindByIdAsync(id);
+
         public async Task<User> GetWithoutQueryFiltersAsync(ClaimsPrincipal principal)
         {
             if (principal.Claims.IsNullOrEmpty()) return null;

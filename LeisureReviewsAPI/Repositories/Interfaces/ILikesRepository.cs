@@ -7,5 +7,7 @@ namespace LeisureReviewsAPI.Repositories.Interfaces
         Task LikeAsync(Review review, User likedUser);
 
         Task<int> GetCountAsync(User user);
+
+        Task<bool> HasLikeAsync(User user, Review review);
     }
 }

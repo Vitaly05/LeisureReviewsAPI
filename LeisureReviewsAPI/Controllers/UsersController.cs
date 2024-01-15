@@ -1,4 +1,5 @@
-﻿using LeisureReviewsAPI.Models.Dto;
+﻿using LeisureReviewsAPI.Models.Database;
+using LeisureReviewsAPI.Models.Dto;
 using LeisureReviewsAPI.Models.ViewModels;
 using LeisureReviewsAPI.Repositories;
 using LeisureReviewsAPI.Repositories.Interfaces;
@@ -22,6 +23,19 @@ namespace LeisureReviewsAPI.Controllers
         public async Task<IActionResult> GetUserInfo(string username)
         {
             var user = await usersRepository.FindAsync(username);
+            return await getUserInfoAsync(user);
+        }
+
+        [HttpGet("get-info-by-id/{userId}")]
+        public async Task<IActionResult> GetUserInfoById(string userId)
+        {
+            var user = await usersRepository.GetByIdAsync(userId);
+            return await getUserInfoAsync(user);
+        }
+
+
+        private async Task<IActionResult> getUserInfoAsync(User user)
+        {
             if (user is null) return NotFound();
             user.LikesCount = await likesRepository.GetCountAsync(user);
             return Ok(new UserDto(user));
