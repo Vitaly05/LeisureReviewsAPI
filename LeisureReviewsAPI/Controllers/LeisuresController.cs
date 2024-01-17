@@ -35,7 +35,7 @@ namespace LeisureReviewsAPI.Controllers
             var leisure = await leisuresRepository.GetAsync(leisureId);
             if (leisure is null) return NotFound();
             var rate = await ratesRepository.GetAsync(await usersRepository.GetAsync(HttpContext.User), leisure);
-            return Ok(rate.Value);
+            return Ok(rate?.Value);
         }
 
         [Authorize]

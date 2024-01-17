@@ -42,7 +42,7 @@ namespace LeisureReviewsAPI.Repositories
         }
 
         public async Task<List<User>> GetAllAsync(int page, int pageSize) =>
-            await userManager.Users.Skip(page * pageSize).Take(pageSize).ToListAsync();
+            await userManager.Users.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
         public async Task<int> GetPagesCountAsync(int pageSize) =>
             (int)Math.Ceiling(await userManager.Users.CountAsync() / (double)pageSize);
