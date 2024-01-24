@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace LeisureReviewsAPI.Attributes
 {

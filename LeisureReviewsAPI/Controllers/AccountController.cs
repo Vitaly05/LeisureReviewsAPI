@@ -3,8 +3,12 @@ using LeisureReviewsAPI.Models;
 using LeisureReviewsAPI.Models.Database;
 using LeisureReviewsAPI.Models.Dto;
 using LeisureReviewsAPI.Repositories.Interfaces;
+using LeisureReviewsAPI.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace LeisureReviewsAPI.Controllers
 {
@@ -12,20 +16,28 @@ namespace LeisureReviewsAPI.Controllers
     [Route("api/account")]
     public class AccountController : BaseController
     {
-        private readonly SignInManager<User> signInManager;
+        private readonly IJwtHelper jwtHelper;
 
         private readonly UserManager<User> userManager;
 
-        public AccountController(IUsersRepository usersRepository, SignInManager<User> signInManager,
+        public AccountController(IUsersRepository usersRepository, IJwtHelper jwtHelper,
             UserManager<User> userManager) : base(usersRepository)
         {
-            this.signInManager = signInManager;
+            this.jwtHelper = jwtHelper;
             this.userManager = userManager;
         }
 
 
-        [HttpGet("check-auth")]
-        public async Task<AccountInfoDto> CheckAuth() => new AccountInfoDto(await getCurrentUserInfoAsync());
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        [HttpGet("get-account-info")]
+        public IActionResult GetAccountInfo()
+        {
+            return Ok(new AccountInfoDto
+            {
+                Id = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier),
+                UserName = HttpContext.User.FindFirstValue(ClaimTypes.Name)
+            });
+        }
 
         [HttpGet("check-create-review-access/{authorId}")]
         public async Task<IActionResult> CheckAccessToCreateReview(string authorId)
@@ -41,15 +53,20 @@ namespace LeisureReviewsAPI.Controllers
         {
             if (!ModelState.IsValid)
                 return InvalidModelState();
-            var user = await signInAsync(model);
-            if (user is null)
+
+            var user = await usersRepository.FindAsync(model.Username);
+            if (user is null || !await passwordIsValidAsync(user, model.Password))
                 return BadRequest(new ErrorResponseModel { Code = 1, Message = "Incorrect username or password" });
-            var accountInfo = new AccountInfoDto
-            {
-                CurrentUser = new UserDto(user),
-                IsAuthorized = true
-            };
-            return Ok(accountInfo);
+            if (!accountIsActive(user)) 
+                return BadRequest(new ErrorResponseModel { Code = 2, Message = "Account has been blocked" });
+
+            var response = await getAuthenticatedResponseAsync(user);
+            addRefreshToken(user, response.RefreshToken);
+
+            var result = await userManager.UpdateAsync(user);
+            if (!result.Succeeded) return StatusCode(500);
+
+            return Ok(response);
         }
 
         [HttpPost("sign-up")]
@@ -57,26 +74,34 @@ namespace LeisureReviewsAPI.Controllers
         {
             if (!ModelState.IsValid)
                 return InvalidModelState();
-            
-            var user = new User { UserName = model.Username };
-            var registerResult = await registerUserAsync(user, model.Password);
-            if (!registerResult)
-                return BadRequest(new ErrorResponseModel { Code = 2, Message = "Username is already taken" });
 
-            await signInManager.SignInAsync(user, model.RememberMe);
-            var accountInfo = new AccountInfoDto
-            {
-                CurrentUser = new UserDto(user),
-                IsAuthorized = true
-            };
-            return Ok(accountInfo);
+            var user = new User { UserName = model.Username };
+            var response = await getAuthenticatedResponseAsync(user);
+            addRefreshToken(user, response.RefreshToken);
+
+            var result = await userManager.CreateAsync(user, model.Password);
+            if (!result.Succeeded)
+                return BadRequest(new ErrorResponseModel { Code = 3, Message = "Username is already taken" });
+
+            return Ok(response);
         }
 
-        [HttpPost("sign-out")]
-        public async Task<IActionResult> SignUserOut()
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] AuthModel model)
         {
-            await signInManager.SignOutAsync();
-            return Ok();
+            if (!ModelState.IsValid) return BadRequest();
+
+            var principal = jwtHelper.GetPrincipal(model.AccessToken);
+            var user = await getCurrentUserAsync(principal.Identity.Name);
+            if (user is null || !validateRefreshToken(user, model.RefreshToken)) return BadRequest("Invalid token");
+
+            var response = await getAuthenticatedResponseAsync(user);
+            addRefreshToken(user, response.RefreshToken);
+
+            var result = await userManager.UpdateAsync(user);
+            if (!result.Succeeded) return StatusCode(500);
+
+            return Ok(response);
         }
         
 
@@ -89,14 +114,6 @@ namespace LeisureReviewsAPI.Controllers
             return model;
         }
 
-        private async Task<User> signInAsync(LoginModel model)
-        {
-            var user = await usersRepository.FindAsync(model.Username);
-            if (!await passwordIsValidAsync(user, model.Password) || !accountIsActive(user)) return null;
-            var result = await signInManager.PasswordSignInAsync(model.Username, model.Password, model.RememberMe, false);
-            return result.Succeeded ? user : null;
-        }
-
         private async Task<bool> passwordIsValidAsync(User user, string password)
         {
             if (!await userManager.CheckPasswordAsync(user, password))
@@ -106,6 +123,25 @@ namespace LeisureReviewsAPI.Controllers
             }
             return true;
         }
+
+        private async Task<AuthModel> getAuthenticatedResponseAsync(User user) =>
+            new AuthModel
+            {
+                AccessToken = await jwtHelper.GenerateTokenAsync(user),
+                RefreshToken = jwtHelper.GenerateRefreshToken()
+            };
+
+        private void addRefreshToken(User user, string refreshToken)
+        {
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddSeconds(30);
+        }
+
+        private bool validateRefreshToken(User user, string refreshToken) =>
+            user.RefreshToken == refreshToken && user.RefreshTokenExpiryTime > DateTime.UtcNow;
+
+        private async Task<User> getCurrentUserAsync(string userName) =>
+            await userManager.Users.FirstOrDefaultAsync(u => u.UserName == userName);
 
         private async Task<bool> registerUserAsync(User user, string password)
         {

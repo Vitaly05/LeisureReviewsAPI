@@ -83,7 +83,7 @@ namespace LeisureReviewsAPI.Controllers
             return Ok(relatedReviewsDto);
         }
 
-        [Authorize]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("save-review")]
         public async Task<IActionResult> SaveReview(ReviewModel reviewModel)
         {
@@ -93,7 +93,7 @@ namespace LeisureReviewsAPI.Controllers
             return Ok(reviewId);
         }
 
-        [Authorize]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpDelete("delete-review/{reviewId}")]
         public async Task<IActionResult> DeleteReview(string reviewId)
         {
@@ -104,7 +104,7 @@ namespace LeisureReviewsAPI.Controllers
             return Ok();
         }
 
-        [Authorize]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("can-like/{reviewId}")]
         public async Task<IActionResult> CanLike(string reviewId)
         {
@@ -116,7 +116,7 @@ namespace LeisureReviewsAPI.Controllers
             return Ok(true);
         }
 
-        [Authorize]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("like-review/{reviewId}")]
         public async Task<IActionResult> LikeReview(string reviewId)
         {

@@ -3,7 +3,6 @@ using LeisureReviewsAPI.Models.Dto;
 using LeisureReviewsAPI.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using System.Globalization;
 
 namespace LeisureReviewsAPI.Hubs
 {
@@ -32,7 +31,7 @@ namespace LeisureReviewsAPI.Hubs
             }
         }
 
-        [Authorize]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         public async Task Send(string text, string reviewId)
         {
             var comment = await createCommentAsync(text, reviewId);

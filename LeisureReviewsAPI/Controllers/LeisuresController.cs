@@ -28,7 +28,7 @@ namespace LeisureReviewsAPI.Controllers
             return new LeisureDto(leisure, averageRate);
         }
 
-        [Authorize]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpGet("get-rate/{leisureId}")]
         public async Task<IActionResult> GetRate(string leisureId)
         {
@@ -38,7 +38,7 @@ namespace LeisureReviewsAPI.Controllers
             return Ok(rate?.Value);
         }
 
-        [Authorize]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         [HttpPost("rate/{leisureId}/{value}")]
         public async Task<IActionResult> RateReview(string leisureId, int value)
         {
@@ -46,6 +46,7 @@ namespace LeisureReviewsAPI.Controllers
             if (leisure is null) return NotFound();
             var rate = new Rate
             {
+                LeisureId = leisureId,
                 Leisure = leisure,
                 User = await usersRepository.GetAsync(HttpContext.User),
                 Value = value

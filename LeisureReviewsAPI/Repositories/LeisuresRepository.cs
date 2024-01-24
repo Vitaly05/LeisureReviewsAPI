@@ -24,7 +24,7 @@ namespace LeisureReviewsAPI.Repositories
         }
 
         public async Task<Leisure> GetAsync(string id) =>
-            await context.Leisures.AsNoTracking().FirstOrDefaultAsync(l => l.Id == id);
+            await context.Leisures.FirstOrDefaultAsync(l => l.Id == id);
 
         public async Task<Leisure> GetFromReviewAsync(string reviewId) =>
             await context.Reviews.Where(r => r.Id == reviewId).Select(r => r.Leisure).FirstOrDefaultAsync();

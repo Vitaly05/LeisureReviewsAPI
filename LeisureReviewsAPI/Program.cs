@@ -9,6 +9,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 using LeisureReviewsAPI.Hubs;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,18 +61,39 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
     options.Password.RequireUppercase = false;
 }).AddEntityFrameworkStores<ApplicationContext>();
 
-builder.Services.AddAuthentication()
-    .AddGoogle(googleOptions =>
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+    .AddJwtBearer(options =>
     {
-        googleOptions.ClientId = builder.Configuration.GetSection("GoogleAuthSettings").GetValue<string>("ClientId");
-        googleOptions.ClientSecret = builder.Configuration.GetSection("GoogleAuthSettings").GetValue<string>("ClientSecret");
-        googleOptions.SignInScheme = IdentityConstants.ExternalScheme;
-    }).AddVkontakte(vkOptions =>
-    {
-        vkOptions.ClientId = builder.Configuration.GetSection("VkontakteAuthSettings").GetValue<string>("ClientId");
-        vkOptions.ClientSecret = builder.Configuration.GetSection("VkontakteAuthSettings").GetValue<string>("ClientSecret");
-        vkOptions.SignInScheme = IdentityConstants.ExternalScheme;
-        vkOptions.CallbackPath = "/Account/ExternalSignInResponse/";
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    (path.StartsWithSegments("/hub/comments")))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 if (!builder.Environment.IsDevelopment())
@@ -97,6 +122,7 @@ builder.Services.AddScoped<IRatesRepository, RatesRepository>();
 builder.Services.AddScoped<IIllustrationsRepository, IllustrationsRepository>();
 builder.Services.AddScoped<ILeisuresRepository, LeisuresRepository>();
 builder.Services.AddScoped<ICloudService, CloudinaryCloudService>();
+builder.Services.AddScoped<IJwtHelper, JwtHelper>();
 
 builder.Services.AddSingleton<ISearchService, AlgoliaSearchService>();
 builder.Services.AddSingleton<ISearchClient>(new SearchClient(
@@ -127,8 +153,11 @@ else
     app.UseStaticFiles();
 }
 
-app.UseCors("ReactClientPolicy");
 app.MapControllers();
+app.UseCors("ReactClientPolicy");
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapHub<CommentsHub>("/hub/comments");
 
