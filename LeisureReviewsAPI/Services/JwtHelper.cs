@@ -67,7 +67,7 @@ namespace LeisureReviewsAPI.Services
 
         private JwtSecurityToken getToken(IEnumerable<Claim> claims) =>
             new JwtSecurityToken(issuer: issuer, audience: audience, claims: claims,
-                expires: DateTime.UtcNow.AddSeconds(15),
+                expires: DateTime.UtcNow.AddMinutes(30),
                 signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)), SecurityAlgorithms.HmacSha512Signature));
 
         private async Task<IEnumerable<Claim>> getClaimsAsync(User user) =>

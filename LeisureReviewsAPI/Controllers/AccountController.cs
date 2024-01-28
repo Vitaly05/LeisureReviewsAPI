@@ -134,7 +134,7 @@ namespace LeisureReviewsAPI.Controllers
         private void addRefreshToken(User user, string refreshToken)
         {
             user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddSeconds(30);
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(30);
         }
 
         private bool validateRefreshToken(User user, string refreshToken) =>

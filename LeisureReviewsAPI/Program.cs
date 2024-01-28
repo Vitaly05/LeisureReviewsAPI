@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 using LeisureReviewsAPI.Hubs;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -34,18 +33,6 @@ if (!builder.Environment.IsDevelopment())
         options.HttpsPort = 443;
     });
 }
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("ReactClientPolicy", policyBuilder =>
-    {
-        policyBuilder.WithOrigins(builder.Configuration["ReactHost"])
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
-});
-
 
 builder.Services.AddDbContext<ApplicationContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -111,6 +98,17 @@ if (!builder.Environment.IsDevelopment())
     });
 }
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ReactClientPolicy", policyBuilder =>
+    {
+        policyBuilder.WithOrigins(builder.Configuration["ReactHost"])
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 builder.Services.AddSignalR();
 
 builder.Services.AddScoped<IUsersRepository, UsersRepository>();
@@ -153,11 +151,12 @@ else
     app.UseStaticFiles();
 }
 
-app.MapControllers();
 app.UseCors("ReactClientPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapControllers();
 
 app.MapHub<CommentsHub>("/hub/comments");
 
