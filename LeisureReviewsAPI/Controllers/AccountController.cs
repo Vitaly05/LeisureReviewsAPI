@@ -1,4 +1,5 @@
-﻿using LeisureReviewsAPI.Data;
+﻿using Google.Apis.Auth;
+using LeisureReviewsAPI.Data;
 using LeisureReviewsAPI.Models;
 using LeisureReviewsAPI.Models.Database;
 using LeisureReviewsAPI.Models.Dto;
@@ -95,15 +96,38 @@ namespace LeisureReviewsAPI.Controllers
             var user = await getCurrentUserAsync(principal.Identity.Name);
             if (user is null || !validateRefreshToken(user, model.RefreshToken)) return BadRequest("Invalid token");
 
-            var response = await getAuthenticatedResponseAsync(user);
-            addRefreshToken(user, response.RefreshToken);
-
-            var result = await userManager.UpdateAsync(user);
-            if (!result.Succeeded) return StatusCode(500);
-
-            return Ok(response);
+            return await getTokenResponseAsync(user);
         }
-        
+
+        [HttpPost("google-sign-in")]
+        public async Task<IActionResult> GoogleSignIn([FromBody] GoogleOAuthRequest request)
+        {
+            var payload = await GoogleJsonWebSignature.ValidateAsync(request.TokenId, new GoogleJsonWebSignature.ValidationSettings());
+            if (payload is null) return BadRequest();
+
+            var user = await usersRepository.FindByGooglePayloadAsync(payload);
+            if (user is null)
+                return BadRequest(new ErrorResponseModel { Code = 5, Message = "Redirect to additional info" });
+
+            return await getTokenResponseAsync(user);
+        }
+
+        [HttpPost("google-sign-up")]
+        public async Task<IActionResult> GoogleSignUp(string userName, [FromBody] GoogleOAuthRequest request)
+        {
+            var payload = await GoogleJsonWebSignature.ValidateAsync(request.TokenId, new GoogleJsonWebSignature.ValidationSettings());
+            if (payload is null) return BadRequest();
+
+            if (await usersRepository.FindAsync(userName) is not null)
+                return BadRequest(new ErrorResponseModel { Code = 3, Message = "Username is already taken" });
+
+            if (await usersRepository.FindByGooglePayloadAsync(payload) is not null) 
+                return BadRequest();
+
+            var user = await usersRepository.CreateByGoogleAsync(userName, payload);
+            return await getTokenResponseAsync(user);
+        }
+
 
         private async Task<AccountInfo> getCurrentUserInfoAsync()
         {
@@ -122,6 +146,17 @@ namespace LeisureReviewsAPI.Controllers
                 return false;
             }
             return true;
+        }
+
+        private async Task<IActionResult> getTokenResponseAsync(User user)
+        {
+            var response = await getAuthenticatedResponseAsync(user);
+            addRefreshToken(user, response.RefreshToken);
+
+            var result = await userManager.UpdateAsync(user);
+            if (!result.Succeeded) return StatusCode(500);
+
+            return Ok(response);
         }
 
         private async Task<AuthModel> getAuthenticatedResponseAsync(User user) =>

@@ -1,4 +1,5 @@
-﻿using LeisureReviewsAPI.Data;
+﻿using Google.Apis.Auth;
+using LeisureReviewsAPI.Data;
 using LeisureReviewsAPI.Models.Database;
 using LeisureReviewsAPI.Repositories.Interfaces;
 using Microsoft.AspNetCore.Identity;
@@ -26,8 +27,19 @@ namespace LeisureReviewsAPI.Repositories
         public async Task<User> FindAsync(string userName) =>
             await userManager.FindByNameAsync(userName);
 
-        public async Task<User> FindAsync(string externalProvider, string providerKey) => 
-            await userManager.Users.FirstOrDefaultAsync(u => u.ExternalProvider == externalProvider && u.ProviderKey == providerKey);
+        public async Task<User> FindByGooglePayloadAsync(GoogleJsonWebSignature.Payload payload) =>
+            await userManager.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+
+        public async Task<User> CreateByGoogleAsync(string userName, GoogleJsonWebSignature.Payload payload)
+        {
+            var newUser = new User
+            {
+                UserName = userName,
+                Email = payload.Email,
+            };
+            await userManager.CreateAsync(newUser);
+            return newUser;
+        }
 
         public async Task<User> GetAsync(ClaimsPrincipal principal) =>
             await userManager.GetUserAsync(principal);
