@@ -3,6 +3,7 @@ using LeisureReviewsAPI.Models.Database;
 using LeisureReviewsAPI.Services.Interfaces;
 using Algolia.Search.Clients;
 using LeisureReviewsAPI.Models.Search;
+using Algolia.Search.Exceptions;
 
 namespace LeisureReviewsAPI.Services
 {
@@ -18,12 +19,40 @@ namespace LeisureReviewsAPI.Services
             this.leisureSearchIndex = searchClient.InitIndex("leisures");
         }
 
-        public async Task CreateReviewAsync(Review review) =>
-            await reviewSearchIndex.SaveObjectAsync(getSearchModel(review));
+        public async Task CreateReviewAsync(Review review)
+        {
+            var reviewSearchModel = getSearchModel(review);
+            try
+            {
+                if (reviewSearchModel.Content.Length > 9000)
+                    reviewSearchModel.Content = "";
+                await reviewSearchIndex.SaveObjectAsync(reviewSearchIndex);
+            }
+            catch (AlgoliaApiException ex)
+            {
+                reviewSearchModel.Comments.Clear();
+                await reviewSearchIndex.SaveObjectAsync(reviewSearchIndex);
+            }
+        }
 
 
-        public async Task UpdateReviewAsync(Review review) =>
-            await reviewSearchIndex.PartialUpdateObjectAsync(getSearchModel(review));
+        public async Task UpdateReviewAsync(Review review)
+        {
+            var reviewSearchModel = getSearchModel(review);
+            try
+            {
+                if (reviewSearchModel.Content.Length > 9000)
+                    reviewSearchModel.Content = "";
+                await reviewSearchIndex.PartialUpdateObjectAsync(reviewSearchModel);
+            }
+            catch (AlgoliaApiException ex)
+            {
+                Console.WriteLine(ex.Message);
+                reviewSearchModel.Comments.Clear();
+                await reviewSearchIndex.PartialUpdateObjectAsync(reviewSearchModel);
+            }
+            
+        }
 
         public async Task DeleteReviewAsync(Review review) =>
             await reviewSearchIndex.DeleteObjectAsync(review.Id);
