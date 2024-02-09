@@ -26,12 +26,12 @@ namespace LeisureReviewsAPI.Services
             {
                 if (reviewSearchModel.Content.Length > 9000)
                     reviewSearchModel.Content = "";
-                await reviewSearchIndex.SaveObjectAsync(reviewSearchIndex);
+                await reviewSearchIndex.SaveObjectAsync(reviewSearchModel);
             }
             catch (AlgoliaApiException ex)
             {
                 reviewSearchModel.Comments.Clear();
-                await reviewSearchIndex.SaveObjectAsync(reviewSearchIndex);
+                await reviewSearchIndex.SaveObjectAsync(reviewSearchModel);
             }
         }
 
