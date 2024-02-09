@@ -80,7 +80,7 @@ namespace LeisureReviewsAPI.Controllers
             var response = await getAuthenticatedResponseAsync(user);
             addRefreshToken(user, response.RefreshToken);
 
-            var result = await userManager.CreateAsync(user, model.Password);
+            var result = await usersRepository.CreateAsync(user, model.Password);
             if (!result.Succeeded)
                 return BadRequest(new ErrorResponseModel { Code = 3, Message = "Username is already taken" });
 
@@ -118,13 +118,13 @@ namespace LeisureReviewsAPI.Controllers
             var payload = await GoogleJsonWebSignature.ValidateAsync(request.TokenId, new GoogleJsonWebSignature.ValidationSettings());
             if (payload is null) return BadRequest();
 
-            if (await usersRepository.FindAsync(userName) is not null)
-                return BadRequest(new ErrorResponseModel { Code = 3, Message = "Username is already taken" });
-
             if (await usersRepository.FindByGooglePayloadAsync(payload) is not null) 
                 return BadRequest();
 
             var user = await usersRepository.CreateByGoogleAsync(userName, payload);
+            if (user is null)
+                return BadRequest(new ErrorResponseModel { Code = 3, Message = "Username is already taken" });
+
             return await getTokenResponseAsync(user);
         }
 
@@ -177,12 +177,6 @@ namespace LeisureReviewsAPI.Controllers
 
         private async Task<User> getCurrentUserAsync(string userName) =>
             await userManager.Users.FirstOrDefaultAsync(u => u.UserName == userName);
-
-        private async Task<bool> registerUserAsync(User user, string password)
-        {
-            var result = await usersRepository.CreateAsync(user, password);
-            return result.Succeeded;
-        }
 
         private bool accountIsActive(User user)
         {

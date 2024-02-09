@@ -3,7 +3,6 @@ using LeisureReviewsAPI.Data;
 using LeisureReviewsAPI.Models.Database;
 using LeisureReviewsAPI.Repositories.Interfaces;
 using LeisureReviewsAPI.Services.Interfaces;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 

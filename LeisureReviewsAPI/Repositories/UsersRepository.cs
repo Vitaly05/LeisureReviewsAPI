@@ -18,11 +18,19 @@ namespace LeisureReviewsAPI.Repositories
             this.userManager = userManager;
         }
 
-        public async Task<IdentityResult> CreateAsync(User user, string password) => 
-            await userManager.CreateAsync(user, password);
+        public async Task<IdentityResult> CreateAsync(User newUser, string password)
+        {
+            if (await isUserExistsAsync(newUser.UserName))
+                return IdentityResult.Failed();
+            return await userManager.CreateAsync(newUser, password);
+        }
 
-        public async Task<IdentityResult> CreateAsync(User user) =>
-            await userManager.CreateAsync(user);
+        public async Task<IdentityResult> CreateAsync(User newUser)
+        {
+            if (await isUserExistsAsync(newUser.UserName))
+                return IdentityResult.Failed();
+            return await userManager.CreateAsync(newUser);
+        }
 
         public async Task<User> FindAsync(string userName) =>
             await userManager.FindByNameAsync(userName);
@@ -32,6 +40,9 @@ namespace LeisureReviewsAPI.Repositories
 
         public async Task<User> CreateByGoogleAsync(string userName, GoogleJsonWebSignature.Payload payload)
         {
+            if (await isUserExistsAsync(userName))
+                return null;
+
             var newUser = new User
             {
                 UserName = userName,
@@ -69,6 +80,13 @@ namespace LeisureReviewsAPI.Repositories
         {
             user.Status = status;
             await userManager.UpdateAsync(user);
+        }
+
+        
+        private async Task<bool> isUserExistsAsync(string userName)
+        {
+            var user = await context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.UserName == userName);
+            return user is not null;
         }
     }
 }
