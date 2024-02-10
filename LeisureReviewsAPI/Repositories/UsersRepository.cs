@@ -21,7 +21,7 @@ namespace LeisureReviewsAPI.Repositories
         public async Task<IdentityResult> CreateAsync(User newUser, string password)
         {
             if (await isUserExistsAsync(newUser.UserName))
-                return IdentityResult.Failed();
+                return IdentityResult.Failed(new IdentityError { Code = "3", Description = "Username is already taken" });
             return await userManager.CreateAsync(newUser, password);
         }
 

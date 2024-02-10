@@ -54,6 +54,7 @@ namespace LeisureReviewsAPI.Controllers
         {
             if (!ModelState.IsValid)
                 return InvalidModelState();
+            model.Username = model.Username.Trim();
 
             var user = await usersRepository.FindAsync(model.Username);
             if (user is null || !await passwordIsValidAsync(user, model.Password))
@@ -75,16 +76,21 @@ namespace LeisureReviewsAPI.Controllers
         {
             if (!ModelState.IsValid)
                 return InvalidModelState();
+            model.Username = model.Username.Trim();
 
             var user = new User { UserName = model.Username };
             var response = await getAuthenticatedResponseAsync(user);
             addRefreshToken(user, response.RefreshToken);
 
             var result = await usersRepository.CreateAsync(user, model.Password);
-            if (!result.Succeeded)
-                return BadRequest(new ErrorResponseModel { Code = 3, Message = "Username is already taken" });
 
-            return Ok(response);
+            if (result.Succeeded)
+                return Ok(response);
+
+            if (result.Errors.Any(err => err.Code == "3"))
+                return BadRequest(new ErrorResponseModel { Code = 3, Message = "Username is already taken" });
+            return BadRequest(result.Errors.Select(err => err.Description));
+
         }
 
         [HttpPost("refresh")]
@@ -115,6 +121,7 @@ namespace LeisureReviewsAPI.Controllers
         [HttpPost("google-sign-up")]
         public async Task<IActionResult> GoogleSignUp(string userName, [FromBody] GoogleOAuthRequest request)
         {
+            userName = userName.Trim();
             var payload = await GoogleJsonWebSignature.ValidateAsync(request.TokenId, new GoogleJsonWebSignature.ValidationSettings());
             if (payload is null) return BadRequest();
 
