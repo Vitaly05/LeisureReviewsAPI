@@ -8,6 +8,7 @@
         Game,
         Music,
         Place,
-        Sport
+        Sport,
+        Other
     }
 }
