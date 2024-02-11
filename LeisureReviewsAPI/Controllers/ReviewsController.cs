@@ -55,6 +55,17 @@ namespace LeisureReviewsAPI.Controllers
             return Ok(await getReviewsDtoListAsync(getReviewSortModel(sortTarget, sortType), r => r.AuthorId == user.Id, page));
         }
 
+        [HttpGet("get-tags-page/{page}/{sortTarget}/{sortType}")]
+        public async Task<List<ReviewDto>> GetReviewsPageByTags(int page, string sortTarget, string sortType, [FromQuery] List<string> tags)
+        {
+            if (tags.Count == 0)
+                return await GetReviewsPage(page, sortTarget, sortType);
+            return await getReviewsDtoListAsync(
+                getReviewSortModel(sortTarget, sortType),
+                r => r.Tags.Select(t => t.Name).Any(t => tags.Contains(t)),
+                page);
+        }
+
         [HttpGet("get-pages-count")]
         public async Task<int> GetPagesCount() => await reviewsRepository.GetPagesCountAsync(5, r => true);
 
@@ -64,6 +75,14 @@ namespace LeisureReviewsAPI.Controllers
             var user = await usersRepository.FindAsync(username);
             if (user is null) return NotFound();
             return Ok(await reviewsRepository.GetPagesCountAsync(5, r => r.AuthorId == user.Id));
+        }
+
+        [HttpGet("get-tags-pages-count")]
+        public async Task<int> GetTagsPagesCount([FromQuery] List<string> tags)
+        {
+            if (tags.Count == 0)
+                return await GetPagesCount();
+            return await reviewsRepository.GetPagesCountAsync(5, r => r.Tags.Select(t => t.Name).Any(t => tags.Contains(t)));
         }
 
         [HttpGet("get-review/{reviewId}")]

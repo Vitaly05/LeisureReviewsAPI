@@ -69,7 +69,9 @@ namespace LeisureReviewsAPI.Repositories
         }
 
         private async Task<List<Review>> getPageAsync(IQueryable<Review> reviewQuery, Expression<Func<Review, bool>> predicate, int page, int pageSize) =>
-            await reviewQuery.AsNoTracking()
+            await reviewQuery
+                .AsNoTracking()
+                .Include(r => r.Tags)
                 .Where(predicate)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -106,8 +108,18 @@ namespace LeisureReviewsAPI.Repositories
         private IQueryable<Review> orderReviews<TKey>(SortType sortType, Expression<Func<Review, TKey>> keySelector) =>
             sortType switch
             {
-                SortType.Descending => context.Reviews.AsNoTracking().OrderByDescending(keySelector).Include(r => r.Tags).Include(r => r.Likes).AsSplitQuery(),
-                _ => context.Reviews.AsNoTracking().OrderBy(keySelector).Include(r => r.Tags).Include(r => r.Likes).AsSplitQuery(),
+                SortType.Descending => context.Reviews
+                    .AsNoTracking()
+                    .OrderByDescending(keySelector)
+                    .Include(r => r.Tags)
+                    .Include(r => r.Likes)
+                    .AsSplitQuery(),
+                _ => context.Reviews
+                    .AsNoTracking()
+                    .OrderBy(keySelector)
+                    .Include(r => r.Tags)
+                    .Include(r => r.Likes)
+                    .AsSplitQuery(),
             };
     }
 }
