@@ -22,6 +22,8 @@ namespace LeisureReviewsAPI.Repositories.Interfaces
 
         Task<User> GetByIdAsync(string id);
 
+        Task<string> GetUserName(string id);
+
         Task<User> GetWithoutQueryFiltersAsync(ClaimsPrincipal principal);
 
         Task<List<User>> GetAllAsync(int page, int pageSize);

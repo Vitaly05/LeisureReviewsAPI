@@ -38,6 +38,10 @@ namespace LeisureReviewsAPI.Controllers
             return await getUserInfoAsync(user);
         }
 
+        [HttpGet("get-username/{userId}")]
+        public async Task<string> GetUserName(string userId) =>
+            await usersRepository.GetUserNameAsync(userId);
+
         [AdminAuthorize()]
         [HttpGet("get-page/{page}")]
         public async Task<IActionResult> GetAllUsers(int page)

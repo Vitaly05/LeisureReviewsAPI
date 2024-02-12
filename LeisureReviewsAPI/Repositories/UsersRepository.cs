@@ -57,6 +57,10 @@ namespace LeisureReviewsAPI.Repositories
 
         public async Task<User> GetByIdAsync(string id) => await userManager.FindByIdAsync(id);
 
+        public async Task<string> GetUserName(string id) => 
+            await context.Users.Where(u => u.Id == id).Select(u => u.UserName).FirstOrDefaultAsync();
+
+
         public async Task<User> GetWithoutQueryFiltersAsync(ClaimsPrincipal principal)
         {
             if (principal.Claims.IsNullOrEmpty()) return null;
@@ -74,7 +78,7 @@ namespace LeisureReviewsAPI.Repositories
             await userManager.GetRolesAsync(user) as List<string>;
 
         public async Task<string> GetUserNameAsync(string id) =>
-            (await userManager.FindByIdAsync(id)).UserName;
+            (await userManager.FindByIdAsync(id))?.UserName;
 
         public async Task ChangeStatusAsync(User user, AccountStatus status)
         {
