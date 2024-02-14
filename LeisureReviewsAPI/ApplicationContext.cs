@@ -10,13 +10,17 @@ namespace LeisureReviewsAPI
             : base(options) { }
 
         public DbSet<Review> Reviews { get; set; }
+
         public DbSet<Tag> Tags { get; set; }
 
         public DbSet<Like> Likes { get; set; }
 
         public DbSet<Comment> Comments { get; set; }
-        public DbSet<Rate> Rates { get; set; }
 
+        public DbSet<CommentRate> CommentRates { get; set; }
+        
+        public DbSet<Rate> Rates { get; set; }
+        
         public DbSet<Illustration> Illustrations { get; set; }
 
         public DbSet<Leisure> Leisures { get; set; }

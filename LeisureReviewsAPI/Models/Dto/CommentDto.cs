@@ -11,6 +11,10 @@ namespace LeisureReviewsAPI.Models.Dto
         public string Text { get; set; }
 
         public DateTime CreateTime { get; set; }
+
+        public int LikesCount { get; set; }
+
+        public int DislikesCount { get; set; }
     }
 
     public static class CommentExtension
@@ -23,6 +27,8 @@ namespace LeisureReviewsAPI.Models.Dto
                 AuthorName = comment.Author.UserName,
                 Text = comment.Text,
                 CreateTime = comment.CreateTime,
+                LikesCount = comment.Rates.Count(r => r.IsPositive),
+                DislikesCount = comment.Rates.Count(r => !r.IsPositive)
             };
         }
     }

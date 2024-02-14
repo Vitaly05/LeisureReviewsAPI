@@ -39,14 +39,20 @@ namespace LeisureReviewsAPI.Hubs
             await Clients.Group(reviewId).SendAsync("new-comment", comment.ConvertToDto());
         }
 
-        private async Task<Comment> createCommentAsync(string text, string reviewId)
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        public async Task Rate(bool isPositive, string commentId)
         {
-            return new Comment()
+            await commentsRepository.RateAsync(isPositive, Context.UserIdentifier, commentId);
+            var comment = await commentsRepository.GetByIdAsync(commentId);
+            await Clients.All.SendAsync("update-comment-rate", comment.ConvertToDto());
+        }
+
+        private async Task<Comment> createCommentAsync(string text, string reviewId) =>
+            new Comment()
             {
                 Text = text,
                 Author = await usersRepository.GetAsync(Context.User),
                 Review = await reviewsRepository.GetAsync(reviewId)
             };
-        }
     }
 }

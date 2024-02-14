@@ -21,10 +21,55 @@ namespace LeisureReviewsAPI.Repositories
             await searchService.UpdateReviewAsync(await context.Reviews.FirstOrDefaultAsync(r => r.Id == comment.Review.Id));
         }
 
+        public async Task<Comment> GetByIdAsync(string id) =>
+            await contextComments().FirstOrDefaultAsync(c => c.Id == id);
+
         public async Task<List<Comment>> GetCommentsAsync(string reviewId) =>
-            (await context.Reviews
-                .Include(r => r.Comments)
-                .ThenInclude(c => c.Author)
-                .FirstOrDefaultAsync(c => c.Id == reviewId)).Comments.OrderByDescending(c => c.CreateTime).ToList();
+            await contextComments()
+                .Where(c => c.Review.Id == reviewId)
+                .OrderByDescending(c => c.CreateTime)
+                .ToListAsync();
+
+        public async Task RateAsync(bool isPositive, string userId, string commentId)
+        {
+            bool newRate = false;
+            var rate = await context.CommentRates
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.CommentId == commentId);
+            if (rate is null)
+            {
+                newRate = true;
+                rate = new CommentRate
+                {
+                    IsPositive = isPositive,
+                    UserId = userId,
+                    CommentId = commentId
+                };
+            }
+            if (newRate)
+                await context.CommentRates.AddAsync(rate);
+            else
+            {
+                rate.IsPositive = isPositive;
+                context.CommentRates.Update(rate);
+            }
+            await context.SaveChangesAsync();
+        }
+
+        public async Task<bool?> GetUserRate(string userId, string commentId)
+        {
+            var comment = await context.Comments
+                .Include(c => c.Rates)
+                .FirstOrDefaultAsync(c => c.Id == commentId);
+            if (comment?.Rates?.Count == 0) return null;
+            return comment.Rates.FirstOrDefault(r => r.UserId == userId)?.IsPositive;
+        }
+
+
+        private IQueryable<Comment> contextComments() =>
+            context.Comments
+                .AsNoTracking()
+                .Include(c => c.Author)
+                .Include(c => c.Rates)
+                .Include(c => c.Review);
     }
 }

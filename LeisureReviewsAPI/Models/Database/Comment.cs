@@ -19,5 +19,7 @@ namespace LeisureReviewsAPI.Models.Database
 
         [Required]
         public DateTime CreateTime { get; set; } = DateTime.Now;
+
+        public ICollection<CommentRate> Rates { get; set; } = new List<CommentRate>();
     }
 }
