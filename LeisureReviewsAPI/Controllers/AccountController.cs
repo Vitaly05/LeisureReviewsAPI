@@ -54,6 +54,7 @@ namespace LeisureReviewsAPI.Controllers
             if (await canSaveAndEditAsync(authorId)) return Ok();
             return Forbid();
         }
+        public async Task<IActionResult> CheckAccessToEditReview(string reviewId)
 
         [HttpGet("check-edit-review-access/{reviewId}")]
         public async Task<IActionResult> CheckAccessToEditReview(string reviewId)
