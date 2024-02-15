@@ -21,11 +21,17 @@ namespace LeisureReviewsAPI.Controllers
 
         private readonly UserManager<User> userManager;
 
-        public AccountController(IUsersRepository usersRepository, IJwtHelper jwtHelper,
-            UserManager<User> userManager) : base(usersRepository)
+        private readonly IReviewsRepository reviewsRepository;
+
+        public AccountController(
+            IUsersRepository usersRepository,
+            IJwtHelper jwtHelper,
+            UserManager<User> userManager,
+            IReviewsRepository reviewsRepository) : base(usersRepository)
         {
             this.jwtHelper = jwtHelper;
             this.userManager = userManager;
+            this.reviewsRepository = reviewsRepository;
         }
 
 
@@ -46,6 +52,17 @@ namespace LeisureReviewsAPI.Controllers
             var currentUserInfo = await getCurrentUserInfoAsync();
             if (!currentUserInfo.IsAuthorized) return Forbid();
             if (await canSaveAndEditAsync(authorId)) return Ok();
+            return Forbid();
+        }
+
+        [HttpGet("check-edit-review-access/{reviewId}")]
+        public async Task<IActionResult> CheckAccessToEditReview(string reviewId)
+        {
+            var currentUserInfo = await getCurrentUserInfoAsync();
+            if (!currentUserInfo.IsAuthorized) return Forbid();
+            var review = await reviewsRepository.GetAsync(reviewId);
+            if (review is null) return NotFound();
+            if (await canSaveAndEditAsync(review.AuthorId)) return Ok();
             return Forbid();
         }
 
