@@ -24,12 +24,12 @@ namespace LeisureReviewsAPI.Services
             var reviewSearchModel = getSearchModel(review);
             try
             {
-                if (reviewSearchModel.Content.Length > 9000)
-                    reviewSearchModel.Content = "";
                 await reviewSearchIndex.SaveObjectAsync(reviewSearchModel);
             }
             catch (AlgoliaApiException ex)
             {
+                Console.WriteLine(ex.Message);
+                reviewSearchModel.Content = "";
                 reviewSearchModel.Comments.Clear();
                 await reviewSearchIndex.SaveObjectAsync(reviewSearchModel);
             }
@@ -41,13 +41,12 @@ namespace LeisureReviewsAPI.Services
             var reviewSearchModel = getSearchModel(review);
             try
             {
-                if (reviewSearchModel.Content.Length > 9000)
-                    reviewSearchModel.Content = "";
                 await reviewSearchIndex.PartialUpdateObjectAsync(reviewSearchModel);
             }
             catch (AlgoliaApiException ex)
             {
                 Console.WriteLine(ex.Message);
+                reviewSearchModel.Content = "";
                 reviewSearchModel.Comments.Clear();
                 await reviewSearchIndex.PartialUpdateObjectAsync(reviewSearchModel);
             }
