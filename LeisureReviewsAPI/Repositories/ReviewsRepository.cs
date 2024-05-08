@@ -29,21 +29,22 @@ namespace LeisureReviewsAPI.Repositories
                 .Take(count).Include(r => r.Leisure).AsSplitQuery().ToListAsync();
         }
 
-        public async Task<List<Review>> GetLatestAsync(Expression<Func<Review, bool>> predicate, SortType sortType, int page, int pageSize)
+        public async Task<List<Review>> GetLatestAsync(Expression<Func<Review, bool>> predicate, SortType sortType, LeisureGroup? group, int page, int pageSize)
         {
-            IQueryable<Review> query = orderReviews(sortType, r => r.CreateTime);
+            IQueryable<Review> query = orderReviews(sortType, group, r => r.CreateTime);
+            var c = await query.ToListAsync();
             return await getPageAsync(query, predicate, page, pageSize);
         }
 
-        public async Task<List<Review>> GetTopRatedAsync(Expression<Func<Review, bool>> predicate, SortType sortType, int page, int pageSize)
+        public async Task<List<Review>> GetTopRatedAsync(Expression<Func<Review, bool>> predicate, SortType sortType, LeisureGroup? group, int page, int pageSize)
         {
-            IQueryable<Review> query = orderReviews(sortType, r => r.Leisure.Rates.Average(r => r.Value));
+            IQueryable<Review> query = orderReviews(sortType, group, r => r.Leisure.Rates.Average(r => r.Value));
             return await getPageAsync(query, predicate, page, pageSize);
         }
 
-        public async Task<List<Review>> GetTopLikedAsync(Expression<Func<Review, bool>> predicate, SortType sortType, int page, int pageSize)
+        public async Task<List<Review>> GetTopLikedAsync(Expression<Func<Review, bool>> predicate, SortType sortType, LeisureGroup? group, int page, int pageSize)
         {
-            IQueryable<Review> query = orderReviews(sortType, r => r.Likes.Count);
+            IQueryable<Review> query = orderReviews(sortType, group, r => r.Likes.Count);
             return await getPageAsync(query, predicate, page, pageSize);
         }
 
@@ -105,21 +106,26 @@ namespace LeisureReviewsAPI.Repositories
             return review.Id;
         }
 
-        private IQueryable<Review> orderReviews<TKey>(SortType sortType, Expression<Func<Review, TKey>> keySelector) =>
-            sortType switch
+        private IQueryable<Review> orderReviews<TKey>(SortType sortType, LeisureGroup? group, Expression<Func<Review, TKey>> keySelector)
+        {
+            var query = context.Reviews.AsNoTracking();
+            switch (sortType)
             {
-                SortType.Descending => context.Reviews
-                    .AsNoTracking()
-                    .OrderByDescending(keySelector)
-                    .Include(r => r.Tags)
-                    .Include(r => r.Likes)
-                    .AsSplitQuery(),
-                _ => context.Reviews
-                    .AsNoTracking()
-                    .OrderBy(keySelector)
-                    .Include(r => r.Tags)
-                    .Include(r => r.Likes)
-                    .AsSplitQuery(),
+                case SortType.Descending:
+                    query = query.OrderByDescending(keySelector);
+                    break;
+                case SortType.Ascending:
+                    query = query.OrderBy(keySelector);
+                    break;
             };
+
+            if (group is not null)
+                query = query.Where(r => r.Group == group);
+
+            return query
+                .Include(r => r.Tags)
+                .Include(r => r.Likes)
+                .AsSplitQuery();
+        }
     }
 }

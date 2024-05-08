@@ -2,7 +2,6 @@
 using LeisureReviewsAPI.Models;
 using LeisureReviewsAPI.Models.Database;
 using LeisureReviewsAPI.Models.Dto;
-using LeisureReviewsAPI.Repositories;
 using LeisureReviewsAPI.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,8 +21,6 @@ namespace LeisureReviewsAPI.Controllers
 
         private readonly ILikesRepository likesRepository;
 
-        private readonly IRatesRepository ratesRepository;
-
         public ReviewsController(
             IUsersRepository usersRepository, 
             IReviewsRepository reviewsRepository,
@@ -37,33 +34,33 @@ namespace LeisureReviewsAPI.Controllers
             this.leisuresRepository = leisuresRepository;
             this.tagsRepository = tagsRepository;
             this.likesRepository = likesRepository;
-            this.ratesRepository = ratesRepository;
         }
 
 
         [HttpGet("get-page/{page}/{sortTarget}/{sortType}")]
-        public async Task<List<ReviewDto>> GetReviewsPage(int page, string sortTarget, string sortType)
+        public async Task<List<ReviewDto>> GetReviewsPage(int page, string sortTarget, string sortType, [FromQuery] string leisureGroup)
         {
-            return await getReviewsDtoListAsync(getReviewSortModel(sortTarget, sortType), r => true, page);
+            return await getReviewsDtoListAsync(getReviewSortModel(sortTarget, sortType, leisureGroup), r => true, page);
         }
 
         [HttpGet("get-user-page/{username}/{page}/{sortTarget}/{sortType}")]
-        public async Task<IActionResult> GetReviewsPage(string username, int page, string sortTarget, string sortType)
+        public async Task<IActionResult> GetReviewsPage(string username, int page, string sortTarget, string sortType, string leisureGroup = null)
         {
             var user = await usersRepository.FindAsync(username);
             if (user is null) return NotFound();
-            return Ok(await getReviewsDtoListAsync(getReviewSortModel(sortTarget, sortType), r => r.AuthorId == user.Id, page));
+            return Ok(await getReviewsDtoListAsync(getReviewSortModel(sortTarget, sortType, leisureGroup), r => r.AuthorId == user.Id, page));
         }
 
         [HttpGet("get-tags-page/{page}/{sortTarget}/{sortType}")]
-        public async Task<List<ReviewDto>> GetReviewsPageByTags(int page, string sortTarget, string sortType, [FromQuery] List<string> tags)
+        public async Task<List<ReviewDto>> GetReviewsPageByTags(int page, string sortTarget, string sortType, [FromQuery] string leisureGroup, [FromQuery] List<string> tags)
         {
             if (tags.Count == 0)
-                return await GetReviewsPage(page, sortTarget, sortType);
-            return await getReviewsDtoListAsync(
-                getReviewSortModel(sortTarget, sortType),
+                return await GetReviewsPage(page, sortTarget, sortType, leisureGroup);
+            var f = await getReviewsDtoListAsync(
+                getReviewSortModel(sortTarget, sortType, leisureGroup),
                 r => r.Tags.Select(t => t.Name).Any(t => tags.Contains(t)),
                 page);
+            return f;
         }
 
         [HttpGet("get-pages-count")]
@@ -78,11 +75,23 @@ namespace LeisureReviewsAPI.Controllers
         }
 
         [HttpGet("get-tags-pages-count")]
-        public async Task<int> GetTagsPagesCount([FromQuery] List<string> tags)
+        public async Task<int> GetTagsPagesCount([FromQuery] List<string> tags, [FromQuery] string leisureGroup)
         {
-            if (tags.Count == 0)
-                return await GetPagesCount();
-            return await reviewsRepository.GetPagesCountAsync(5, r => r.Tags.Select(t => t.Name).Any(t => tags.Contains(t)));
+            Enum.TryParse(leisureGroup, out LeisureGroup group);
+            if (group == 0)
+            {
+                if (tags.Count == 0)
+                    return await GetPagesCount();
+                else
+                    return await reviewsRepository.GetPagesCountAsync(5, r => r.Tags.Select(t => t.Name).Any(t => tags.Contains(t)));
+            }
+            else
+            {
+                if (tags.Count == 0)
+                    return await reviewsRepository.GetPagesCountAsync(5, r => r.Group == group);
+                else
+                    return await reviewsRepository.GetPagesCountAsync(5, r => r.Group == group && r.Tags.Select(t => t.Name).Any(t => tags.Contains(t)));
+            }            
         }
 
         [HttpGet("get-review/{reviewId}")]
@@ -147,15 +156,17 @@ namespace LeisureReviewsAPI.Controllers
         }
 
 
-        private ReviewSortModel getReviewSortModel(string sortTarget, string sortType)
+        private ReviewSortModel getReviewSortModel(string sortTarget, string sortType, string leisureGroup)
         {
             Enum.TryParse(sortTarget, out ReviewSortTarget target);
             Enum.TryParse(sortType, out SortType type);
-            return new ReviewSortModel { Target = target, Type = type };
+            Enum.TryParse(leisureGroup, out LeisureGroup group);
+            return new ReviewSortModel { Target = target, Type = type, LeisureGroup = group == 0 ? null : group };
         }
 
         private async Task<List<ReviewDto>> getReviewsDtoListAsync(ReviewSortModel reviewSortModel, Expression<Func<Review, bool>> predicate, int page)
         {
+            if (page < 1) page = 1;
             var reviews = await getReviewsAsync(reviewSortModel, predicate, page, 5);
             return reviews.Select(r => new ReviewDto(r)).ToList();
         }
@@ -163,9 +174,9 @@ namespace LeisureReviewsAPI.Controllers
         private async Task<List<Review>> getReviewsAsync(ReviewSortModel sortModel, Expression<Func<Review, bool>> predicate, int page, int pageSize) =>
             sortModel.Target switch
             {
-                ReviewSortTarget.Date => await reviewsRepository.GetLatestAsync(predicate, sortModel.Type, page, pageSize),
-                ReviewSortTarget.Rate => await reviewsRepository.GetTopRatedAsync(predicate, sortModel.Type, page, pageSize),
-                ReviewSortTarget.Likes => await reviewsRepository.GetTopLikedAsync(predicate, sortModel.Type, page, pageSize),
+                ReviewSortTarget.Date => await reviewsRepository.GetLatestAsync(predicate, sortModel.Type, sortModel.LeisureGroup, page, pageSize),
+                ReviewSortTarget.Rate => await reviewsRepository.GetTopRatedAsync(predicate, sortModel.Type, sortModel.LeisureGroup, page, pageSize),
+                ReviewSortTarget.Likes => await reviewsRepository.GetTopLikedAsync(predicate, sortModel.Type, sortModel.LeisureGroup, page, pageSize),
                 _ => new()
             };
 
@@ -174,7 +185,6 @@ namespace LeisureReviewsAPI.Controllers
             var tags = await addTagsAsync(reviewModel.TagsNames);
             var leisure = await leisuresRepository.AddAsync(reviewModel.LeisureName);
             var reviewId = await reviewsRepository.SaveAsync(reviewModel.ConvertToReview(tags, leisure));
-            //await updateIllustrationAsync(reviewModel);
             return reviewId;
         }
 
